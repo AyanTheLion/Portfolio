@@ -19,6 +19,7 @@ body {
     overflow-x: hidden;
 }
 
+/* Background overlay */
 .background-overlay {
     position: fixed;
     top: 0;
@@ -35,21 +36,30 @@ body {
     padding: 2rem;
 }
 
+/* Header */
 header h1 {
     text-align: center;
     font-size: 3rem;
-    margin-bottom: 3rem;
+    margin-bottom: 0.5rem;
     background: linear-gradient(to right, var(--pastel-purple), var(--pastel-blue));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
+.tagline {
+    text-align: center;
+    font-size: 1.2rem;
+    color: var(--pastel-blue);
+    margin-bottom: 2.5rem;
+}
 
+/* Responsive project grid */
 .project-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 2rem;
 }
 
+/* Project cards */
 .project-card {
     aspect-ratio: 16/9;
     background: rgba(255, 255, 255, 0.05);
@@ -57,42 +67,127 @@ header h1 {
     overflow: hidden;
     position: relative;
     cursor: pointer;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0;
+    animation: fadeUp 0.8s forwards;
+}
+.project-card:nth-child(1) { animation-delay: 0.1s; }
+.project-card:nth-child(2) { animation-delay: 0.3s; }
+.project-card:nth-child(3) { animation-delay: 0.5s; }
+
+@keyframes fadeUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 .project-card:hover {
     transform: scale(1.05);
-    box-shadow: 0 10px 25px rgba(140, 122, 230, 0.2);
+    box-shadow: 0 12px 30px rgba(140, 122, 230, 0.3);
 }
 
+/* Overlay inside project cards */
 .project-overlay {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
-    background: linear-gradient(to top, rgba(18, 20, 32, 0.9), transparent);
+    background: linear-gradient(to top, rgba(18, 20, 32, 0.95), transparent);
     padding: 1rem;
     transition: transform 0.3s ease;
 }
-
 .project-card:hover .project-overlay {
-    transform: translateY(-10px);
+    transform: translateY(-5px);
 }
-
 .project-overlay h3 {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     color: var(--pastel-purple);
-    margin-bottom: 0.5rem;
 }
-
 .project-overlay p {
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: var(--text-color);
+    opacity: 0.9;
 }
 
+/* Back button */
+.back-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--pastel-purple), var(--pastel-blue));
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.3s ease;
+}
+.back-link:hover {
+    background: linear-gradient(90deg, var(--pastel-pink), var(--pastel-blue));
+}
+
+/* Project details container */
 .project-details {
-    max-width: 800px;
-    background: rgba(255, 255, 255, 0.05);
-    padding
+    max-width: 900px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    animation: fadeUp 0.8s ease forwards;
+}
+
+/* Subtitle under project title */
+.subtitle {
+    text-align: center;
+    font-size: 1.2rem;
+    color: var(--pastel-blue);
+    margin-top: -0.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Section spacing inside details */
+.project-description h3 {
+    margin-top: 2rem;
+    margin-bottom: 0.8rem;
+    font-size: 1.4rem;
+    color: var(--pastel-purple);
+}
+
+/* Tech stack badges */
+.tech-stack ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.tech-stack li {
+    background: rgba(140, 122, 230, 0.2);
+    border: 1px solid rgba(140, 122, 230, 0.4);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    color: var(--pastel-purple);
+    font-weight: 500;
+}
+
+/* Project images grid */
+.project-images {
+    margin-top: 2rem;
+}
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.2rem;
+}
+.image-grid img {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.image-grid img:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 25px rgba(84, 160, 255, 0.3);
 }
