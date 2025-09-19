@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Epic Clicker</title>
+    <style>
+        :root{--bg:#0b1020;--panel:#0f1724;--accent:#66f;--muted:#9aa3b2;--glass:rgba(255,255,255,0.03)}
+        html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
+        body{background:linear-gradient(180deg,#071021 0%,#071629 60%);color:#e6eef8;display:flex;align-items:stretch}
+        #app{display:grid;grid-template-columns:1fr 360px;height:100vh;gap:18px;padding:18px;width:100%}
+        .panel{background:var(--panel);border-radius:14px;padding:14px;box-shadow:0 8px 30px rgba(2,6,23,0.6);backdrop-filter:blur(6px)}
+        #gameCanvas{width:100%;height:100%;border-radius:12px;background:linear-gradient(180deg,#081229,#06121c)}
+        header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+        .top-info{display:flex;gap:12px;align-items:center}
+        .big-num{font-size:20px;font-weight:700}
+        .small{color:var(--muted);font-size:12px}
+        #shop{display:flex;flex-direction:column;gap:10px;height:calc(100% - 60px);overflow:auto}
+        .shop-item{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent)}
+        button{background:linear-gradient(90deg,var(--accent),#44c);border:none;padding:8px 12px;border-radius:8px;color:white;cursor:pointer}
+        .row{display:flex;gap:10px;align-items:center}
+        .stat{background:var(--glass);padding:8px;border-radius:8px}
+        #footer{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px}
+        .small-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:6px;border-radius:8px;color:var(--muted);cursor:pointer}
+        #achievements{display:flex;flex-direction:column;gap:6px}
+        .ach{padding:8px;border-radius:8px;background:#06121a;border-left:4px solid rgba(255,255,255,0.02)}
+        .cursor-pointer{cursor:pointer}
+        /* responsive */
+        @media (max-width:980px){#app{grid-template-columns:1fr 360px} }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="panel" style="display:flex;flex-direction:column;gap:12px">
+        <header>
+            <div class="top-info">
+                <div>
+                    <div class="small">Energy Orbs</div>
+                    <div class="big-num" id="orbCount">0</div>
+                </div>
+                <div class="stat">
+                    <div class="small">Per Click</div>
+                    <div id="perClick">1</div>
+                </div>
+                <div class="stat">
+                    <div class="small">Per Sec</div>
+                    <div id="perSec">0</div>
+                </div>
+            </div>
+            <div>
+                <button id="prestigeBtn">Prestige</button>
+            </div>
+        </header>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="footer">
+            <div class="row">
+                <button id="clickBtn" class="big-btn">Tap / Click</button>
+                <div class="small" id="comboDisplay">Combo x1</div>
+            </div>
+            <div class="row">
+                <div class="small">World: <strong id="worldName">Core</strong></div>
+                <div class="small">Prestige: <span id="prestigePoints">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" style="display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div>
+                <div class="small">Shop & Upgrades</div>
+                <div style="font-weight:700">Workshop</div>
+            </div>
+            <div class="small">Offline sim & Events enabled</div>
+        </div>
+
+        <div id="shop"></div>
+
+        <hr style="border:0;height:1px;background:linear-gradient(90deg,#ffffff08,transparent);margin:10px 0">
+
+        <div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div><strong>Achievements</strong></div>
+                <div class="small">Total: <span id="achCount">0</span></div>
+            </div>
+            <div id="achievements" style="margin-top:8px"></div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // ---------- Game Data ----------
+    const game = {
+      orbs: 0,
+      perClick: 1,
+      perSec: 0,
+      prestige: 0,
+      totalClicked: 0,
+      clicksThisSecond: 0,
+      lastTick: Date.now(),
+      upgrades: [],
+      achievements: [],
+      world: 'Core',
+      combo: {count:0, multiplier:1, lastClick:0},
+      goldenTimer: 30,
+      autoEarnAccumulator:0
+    };
+
+    // Default upgrades - id, name, baseCost, level, baseValue, type
+    const defaultUpgrades = [
+      {id:'autoclick', name:'Auto-Clicker', baseCost:15, level:0, baseValue:0.5, type:'perSec'},
+      {id:'mult1', name:'Click Multiplier', baseCost:50, level:0, baseValue:0.5, type:'perClick'},
+      {id:'orbFactory', name:'Orb Factory', baseCost:150, level:0, baseValue:5, type:'perSec'},
+      {id:'synergy', name:'Synergy Link', baseCost:400, level:0, baseValue:0.02, type:'global'},
+      {id:'goldenMagnet', name:'Golden Magnet', baseCost:800, level:0, baseValue:5, type:'goldenBoost'}
+    ];
+
+    // Load or initialize
+    function save(){ localStorage.setItem('epic_clicker', JSON.stringify(game)); }
+    function load(){
+      const s = localStorage.getItem('epic_clicker');
+      if(s){
+        const parsed = JSON.parse(s);
+        Object.assign(game, parsed);
+        // ensure arrays are present
+        game.upgrades = game.upgrades.length?game.upgrades:defaultUpgrades.map(u=>Object.assign({},u));
+      } else {
+        game.upgrades = defaultUpgrades.map(u=>Object.assign({},u));
+      }
+    }
+
+    load();
+
+    // ---------- UI Bindings ----------
+    const orbCountEl = document.getElementById('orbCount');
+    const perClickEl = document.getElementById('perClick');
+    const perSecEl = document.getElementById('perSec');
+    const clickBtn = document.getElementById('clickBtn');
+    const shopEl = document.getElementById('shop');
+    const comboEl = document.getElementById('comboDisplay');
+    const achievementsEl = document.getElementById('achievements');
+    const achCountEl = document.getElementById('achCount');
+    const prestigeBtn = document.getElementById('prestigeBtn');
+    const worldNameEl = document.getElementById('worldName');
+    const prestigePointsEl = document.getElementById('prestigePoints');
+
+    // ---------- Canvas Visuals ----------
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    function resize(){ canvas.width = canvas.clientWidth * devicePixelRatio; canvas.height = canvas.clientHeight * devicePixelRatio; }
+    window.addEventListener('resize',resize); resize();
+
+    // Particles and floating texts
+    const particles = [];
+    function spawnParticle(x,y,txt,color,large=false){
+      particles.push({x,y,txt,color,life:100,vy:(Math.random()*-1.2-0.4),vx:(Math.random()*2-1),size:large?22:14,alpha:1});
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // background subtle gradient
+      const g = ctx.createLinearGradient(0,0,0,canvas.height);
+      g.addColorStop(0,'#071229'); g.addColorStop(1,'#012021'); ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+      // center orb main
+      const cx = canvas.width/2, cy = canvas.height/2;
+      const r = Math.min(canvas.width,canvas.height)/10;
+      // glow
+      for(let i=6;i>=1;i--){ ctx.beginPath(); ctx.fillStyle = `rgba(102,102,255,${0.03*i})`; ctx.arc(cx,cy,r+10*i,0,Math.PI*2); ctx.fill(); }
+      // orb
+      const radial = ctx.createRadialGradient(cx - r*0.4, cy - r*0.4, r*0.1, cx,cy,r); radial.addColorStop(0,'#ffffff'); radial.addColorStop(0.2,'#aab4ff'); radial.addColorStop(1,'#5566ff'); ctx.fillStyle=radial; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+      // orb shine
+      ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.ellipse(cx - r*0.3, cy - r*0.45, r*0.28, r*0.36, -0.6, 0, Math.PI*2); ctx.fill();
+
+      // floating particles
+      for(let i=particles.length-1;i>=0;i--){
+        const p = particles[i]; p.x += p.vx * devicePixelRatio; p.y += p.vy * devicePixelRatio; p.vy -= 0.01; p.life -= 1;
+        ctx.globalAlpha = p.life/120 * p.alpha;
+        ctx.font = `${p.size}px system-ui`; ctx.fillStyle = p.color || '#fff'; ctx.fillText(p.txt, p.x, p.y);
+        ctx.globalAlpha = 1;
+        if(p.life<=0) particles.splice(i,1);
+      }
+
+      // mini HUD on canvas
+      ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(14*devicePixelRatio,14*devicePixelRatio,260*devicePixelRatio,60*devicePixelRatio);
+      ctx.fillStyle='#cfe3ff'; ctx.font=`${16*devicePixelRatio}px system-ui`; ctx.fillText(`Orbs: ${format(game.orbs)}`, 24*devicePixelRatio, 36*devicePixelRatio);
+      ctx.fillStyle='#9fb7ff'; ctx.font=`${12*devicePixelRatio}px system-ui`; ctx.fillText(`Per Sec: ${format(game.perSec)}  |  Prestige: ${game.prestige}`, 24*devicePixelRatio, 54*devicePixelRatio);
+    }
+
+    // ---------- Core Mechanics ----------
+    function format(n){ if(n>=1e9) return (n/1e9).toFixed(2)+'B'; if(n>=1e6) return (n/1e6).toFixed(2)+'M'; if(n>=1000) return (n/1000).toFixed(2)+'k'; return Math.floor(n); }
+
+    function recalc(){
+      // perSec from upgrades
+      let perSec = 0, perClick = 1 + game.prestige*0.1;
+      for(const u of game.upgrades){
+        if(u.type === 'perSec') perSec += u.baseValue * Math.pow(1.15,u.level);
+        if(u.type === 'perClick') perClick += u.baseValue * Math.pow(1.14,u.level);
+        if(u.type === 'global') { perSec *= 1 + u.baseValue * u.level; perClick *= 1 + u.baseValue * u.level; }
+        if(u.type === 'goldenBoost') {} // handled on golden
+      }
+      // combo multiplier
+      perClick *= game.combo.multiplier;
+
+      game.perClick = perClick;
+      game.perSec = perSec;
+      perClickEl.innerText = format(perClick);
+      perSecEl.innerText = format(perSec);
+      orbCountEl.innerText = format(game.orbs);
+      worldNameEl.innerText = game.world;
+      prestigePointsEl.innerText = game.prestige;
+    }
+
+    // Click action
+    function doClick(fromGolden=false){
+      const now = Date.now();
+      // combo logic: if clicks within 1200ms
+      if(now - game.combo.lastClick < 1200){ game.combo.count++; game.combo.multiplier = 1 + Math.min(5, game.combo.count*0.02); }
+      else { game.combo.count = 1; game.combo.multiplier = 1; }
+      game.combo.lastClick = now;
+      const gain = game.perClick + (fromGolden? game.perClick * 10 : 0);
+      game.orbs += gain;
+      game.totalClicked++;
+      game.clicksThisSecond++;
+      spawnParticle(canvas.width/2 + (Math.random()*80-40), canvas.height/2 + (Math.random()*80-40), '+' + Math.round(gain), '#fff', true);
+      comboEl.innerText = `Combo x${game.combo.multiplier.toFixed(2)}`;
+      checkAchievements();
+    }
+
+    clickBtn.addEventListener('click',()=>doClick());
+    canvas.addEventListener('pointerdown',()=>doClick());
+
+    // ---------- Shop ----------
+    function shopCost(u){ return Math.ceil(u.baseCost * Math.pow(1.25, u.level)); }
+
+    function buyUpgrade(id){
+      const u = game.upgrades.find(x=>x.id===id);
+      const cost = shopCost(u);
+      if(game.orbs >= cost){ game.orbs -= cost; u.level++; recalc(); save(); spawnParticle(200,200,'+','lime'); }
+    }
+
+    function renderShop(){ shopEl.innerHTML = '';
+      for(const u of game.upgrades){
+        const item = document.createElement('div'); item.className='shop-item';
+        const left = document.createElement('div'); left.innerHTML = `<strong>${u.name}</strong><div class="small">Level ${u.level} • ${u.type}</div>`;
+        const right = document.createElement('div');
+        const btn = document.createElement('button'); btn.innerText = 'Buy'; btn.onclick = ()=>{ buyUpgrade(u.id); renderShop(); };
+        const cost = document.createElement('div'); cost.className='small'; cost.style.marginTop='6px'; cost.innerText = `Cost: ${format(shopCost(u))}`;
+        right.appendChild(cost); right.appendChild(btn);
+        item.appendChild(left); item.appendChild(right); shopEl.appendChild(item);
+      }
+    }
+
+    // ---------- Prestige ----------
+    prestigeBtn.addEventListener('click',()=>{
+      const gain = Math.floor(Math.sqrt(game.orbs/100));
+      if(gain<=0) { alert('You need more orbs to prestige.'); return; }
+      if(confirm(`Prestige and gain ${gain} permanent points? (Resets orbs and upgrades)`) ){
+        game.prestige += gain; game.orbs=0; game.perClick=1; game.perSec=0; game.upgrades = defaultUpgrades.map(u=>Object.assign({},u)); game.totalClicked=0; save(); recalc(); renderShop(); checkAchievements(true);
+      }
+    });
+
+    // ---------- Achievements ----------
+    const achDefs = [
+      {id:'firstClick', text:'First Click!', check:()=>game.totalClicked>=1, reward:()=>{game.orbs+=10}},
+      {id:'click100', text:'Clicked 100 times', check:()=>game.totalClicked>=100, reward:()=>{game.orbs+=200}},
+      {id:'buy5', text:'Buy 5 Upgrades', check:()=>game.upgrades.reduce((s,u)=>s+u.level,0)>=5, reward:()=>{game.orbs+=500}},
+      {id:'prestige1', text:'First Prestige', check:()=>game.prestige>=1, reward:()=>{game.orbs+=1000}},
+    ];
+
+    function checkAchievements(onPrestige=false){
+      for(const a of achDefs){ if(a.check() && !game.achievements.includes(a.id)){ game.achievements.push(a.id); a.reward(); spawnParticle(100,100,'ACH!','gold',true); save(); renderAchievements(); }}
+      if(onPrestige) renderAchievements();
+    }
+
+    function renderAchievements(){ achievementsEl.innerHTML='';
+      for(const id of game.achievements){ const def = achDefs.find(a=>a.id===id); const el=document.createElement('div'); el.className='ach'; el.innerText = def ? def.text : id; achievementsEl.appendChild(el); }
+      achCountEl.innerText = game.achievements.length;
+    }
+
+    // ---------- Golden Orbs Mini-event ----------
+    let goldenActive=false;
+    function spawnGolden(){ goldenActive = true; spawnParticle(canvas.width/2+200, canvas.height/2-120, 'GOLDEN', '#ffd24d', true); }
+
+    canvas.addEventListener('pointerdown', (e)=>{
+      if(goldenActive){
+        goldenActive = false;
+        const bonus = Math.max(100, Math.floor(game.perClick*50));
+        game.orbs += bonus; spawnParticle(e.clientX, e.clientY, '+'+bonus, '#ffd24d', true);
+        checkAchievements(); save();
+      }
+    });
+
+    // ---------- Ticks & Offline Progress ----------
+    function tick(delta){
+      // per second income
+      game.orbs += game.perSec * delta/1000;
+      game.autoEarnAccumulator += game.perSec * delta/1000;
+      // occasionally spawn golden
+      game.goldenTimer -= delta/1000;
+      if(game.goldenTimer <= 0){ spawnGolden(); game.goldenTimer = 15 + Math.random()*45; }
+      // combo decay
+      if(Date.now() - game.combo.lastClick > 2000){ game.combo.count = 0; game.combo.multiplier = 1; comboEl.innerText = `Combo x${game.combo.multiplier.toFixed(2)}`; }
+    }
+
+    let lastSave = Date.now();
+    function gameLoop(){
+      const now = Date.now(); const delta = now - game.lastTick; game.lastTick = now;
+      tick(delta);
+      // passive clickers (auto clicker upgrade) apply as added perSec; also simulate offline clicks for big auto-clickers occasionally as particles
+      // visual particles occasionally
+      if(Math.random() < 0.02) spawnParticle(Math.random()*canvas.width, canvas.height - 40, '+'+Math.floor(Math.random()*5), '#bfe');
+      // update UI every 250ms
+      if(now % 250 < 40){ recalc(); }
+      draw();
+      // auto save every 5 seconds
+      if(now - lastSave > 5000){ save(); lastSave = now; }
+      requestAnimationFrame(gameLoop);
+    }
+
+    // On load, simulate offline progress
+    (function offlineSim(){
+      const s = localStorage.getItem('epic_clicker_saved_at');
+      const savedAt = s ? parseInt(s) : Date.now();
+      const diff = Math.min(3600*1000, Date.now()-savedAt); // cap to 1 hour
+      if(diff>60000){ const seconds = diff/1000; // add perSec * seconds
+        recalc(); game.orbs += game.perSec * seconds * 0.5; // half efficiency
+        spawnParticle(canvas.width/2, canvas.height/2, 'Offline gains', '#9ff', true);
+      }
+      localStorage.setItem('epic_clicker_saved_at', Date.now());
+    })();
+
+    // Save timestamp before unload
+    window.addEventListener('beforeunload', ()=>{ localStorage.setItem('epic_clicker_saved_at', Date.now()); save(); });
+
+    // initialize
+    recalc(); renderShop(); renderAchievements();
+    requestAnimationFrame(gameLoop);
+
+    // Quick keyboard shortcuts for testing
+    window.addEventListener('keydown', (e)=>{
+      if(e.key==='/' ) { game.orbs+=10000; recalc(); }
+      if(e.key==='p') { game.prestige++; recalc(); }
+    });
+
+    // small UI polish: clicking main orb via central area
+    canvas.addEventListener('click', (ev)=>{ const rect = canvas.getBoundingClientRect(); const x = (ev.clientX - rect.left)*devicePixelRatio; const y = (ev.clientY - rect.top)*devicePixelRatio; const cx = canvas.width/2, cy = canvas.height/2; const r = Math.min(canvas.width,canvas.height)/10; if(Math.hypot(cx-x, cy-y) <= r*1.2) doClick(); });
+
+</script>
+</body>
+</html>
