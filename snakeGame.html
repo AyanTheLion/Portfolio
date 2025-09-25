@@ -1,256 +1,77 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Canvas Snake — Deluxe Edition</title>
-    <style>
-        :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8}
-        html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
-        body{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#071020 0%,#071827 100%);color:#e6eef6}
-        .container{width:min(980px,96vw);max-width:980px;padding:20px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.03));box-shadow:0 10px 30px rgba(2,6,23,0.6)}
-        header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-        h1{font-size:18px;margin:0}
-        .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-        button{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--accent);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
-        button:hover{filter:brightness(1.1)}
-        #gameWrap{display:grid;grid-template-columns:1fr 260px;gap:16px}
-        #canvasCard{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:10px;display:flex;align-items:center;justify-content:center}
-        canvas{background:linear-gradient(180deg,#011220,#032433);border-radius:8px;max-width:100%;height:auto;display:block}
-        .side{background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(255,255,255,0.005));padding:12px;border-radius:10px}
-        .metric{display:flex;flex-direction:column;gap:6px}
-        .metric > div{font-size:13px;color:var(--muted)}
-        .big{font-size:28px;color:#fff;font-weight:700}
-        .hint{font-size:12px;color:var(--muted);margin-top:8px}
-        .footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--muted);font-size:12px}
-        .skinSelect{margin-left:6px;padding:6px;border-radius:6px;background:transparent;color:inherit;border:1px solid rgba(255,255,255,0.04)}
-        #menuOverlay{position:fixed;inset:0;background:rgba(7,16,32,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;color:#fff;text-align:center}
-        #menuOverlay h1{font-size:36px;margin-bottom:16px}
-        #menuOverlay p{color:var(--muted);margin-bottom:20px}
-        #menuOverlay button{font-size:18px;padding:12px 24px}
-        @media (max-width:880px){#gameWrap{grid-template-columns:1fr;}
-          .side{order:2}
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game | Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-<div id="menuOverlay">
-    <h1>🐍 Canvas Snake — Deluxe Edition</h1>
-    <p>Eat apples, grow longer, level up, and chase high scores!</p>
-    <button id="playBtn">▶ Start Game</button>
-</div>
+<div class="background-overlay"></div>
+<div class="container project-details">
+    <a href="index.html" class="back-link">← Back to Portfolio</a>
 
-<div class="container" style="display:none" id="gameContainer">
     <header>
-        <h1>Canvas Snake — Deluxe Edition 🐍</h1>
-        <div class="controls">
-            <button id="startBtn">Start</button>
-            <button id="pauseBtn">Pause</button>
-            <button id="resetBtn">Restart</button>
-            <label style="font-size:13px;color:var(--muted)">Grid:
-                <select id="gridSelect" class="skinSelect">
-                    <option value="16">Small</option>
-                    <option value="20" selected>Medium</option>
-                    <option value="28">Large</option>
-                </select>
-            </label>
-            <label style="font-size:13px;color:var(--muted)">Skin:
-                <select id="skinSelect" class="skinSelect">
-                    <option value="classic">Classic</option>
-                    <option value="neon">Neon</option>
-                    <option value="rainbow">Rainbow</option>
-                    <option value="emoji">Emoji</option>
-                </select>
-            </label>
-            <button id="soundBtn">🔊 Sound On</button>
-        </div>
+        <h1>🐍 Snake Game — Deluxe Edition</h1>
+        <p class="subtitle">Eat apples, grow longer, and chase high scores!</p>
     </header>
 
-    <main id="gameWrap">
-        <div id="canvasCard">
-            <canvas id="game" width="640" height="480" aria-label="Snake game canvas"></canvas>
-        </div>
+    <!-- Menu overlay -->
+    <div id="menuOverlay">
+        <h2>Snake Game</h2>
+        <p>Eat apples, grow longer, level up, and chase high scores!</p>
+        <button id="playBtn" class="btn-primary">▶ Start Game</button>
+    </div>
 
-        <aside class="side">
-            <div class="metric"><div>Score</div><div class="big" id="score">0</div></div>
-            <div style="height:12px"></div>
-            <div class="metric"><div>High Score</div><div class="big" id="high">0</div></div>
-            <div style="height:12px"></div>
-            <div class="metric"><div>Level</div><div class="big" id="level">1</div></div>
-            <div class="hint">Controls: Arrow keys / WASD / swipe. Space = pause. Skins & levels available.</div>
-            <div style="height:10px"></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button id="saveBtn">Save High Score</button>
-                <button id="clearBtn">Clear High Score</button>
+    <!-- Game container -->
+    <div class="snake-container" id="gameContainer" style="display:none">
+        <header class="snake-header">
+            <div class="controls">
+                <button id="startBtn">Start</button>
+                <button id="pauseBtn">Pause</button>
+                <button id="resetBtn">Restart</button>
+                <label>Grid:
+                    <select id="gridSelect" class="skinSelect">
+                        <option value="16">Small</option>
+                        <option value="20" selected>Medium</option>
+                        <option value="28">Large</option>
+                    </select>
+                </label>
+                <label>Skin:
+                    <select id="skinSelect" class="skinSelect">
+                        <option value="classic">Classic</option>
+                        <option value="neon">Neon</option>
+                        <option value="rainbow">Rainbow</option>
+                        <option value="emoji">Emoji</option>
+                    </select>
+                </label>
+                <button id="soundBtn">🔊 Sound On</button>
             </div>
-            <div class="footer">
-                <div id="status">Ready</div>
-                <div id="soundStatus"></div>
+        </header>
+
+        <main class="snake-wrap">
+            <div class="canvas-card">
+                <canvas id="game" width="640" height="480" aria-label="Snake game canvas"></canvas>
             </div>
-        </aside>
-    </main>
+
+            <aside class="snake-side">
+                <div class="metric"><div>Score</div><div class="big" id="score">0</div></div>
+                <div class="metric"><div>High Score</div><div class="big" id="high">0</div></div>
+                <div class="metric"><div>Level</div><div class="big" id="level">1</div></div>
+                <div class="hint">Controls: Arrow keys / WASD / swipe. Space = pause.</div>
+                <div class="side-buttons">
+                    <button id="saveBtn">Save High Score</button>
+                    <button id="clearBtn">Clear High Score</button>
+                </div>
+                <div class="footer">
+                    <div id="status">Ready</div>
+                    <div id="soundStatus"></div>
+                </div>
+            </aside>
+        </main>
+    </div>
 </div>
-
-<script>
-    (() => {
-      const canvas = document.getElementById('game');
-      const ctx = canvas.getContext('2d');
-      const startBtn = document.getElementById('startBtn');
-      const pauseBtn = document.getElementById('pauseBtn');
-      const resetBtn = document.getElementById('resetBtn');
-      const gridSelect = document.getElementById('gridSelect');
-      const skinSelect = document.getElementById('skinSelect');
-      const scoreEl = document.getElementById('score');
-      const highEl = document.getElementById('high');
-      const levelEl = document.getElementById('level');
-      const statusEl = document.getElementById('status');
-      const saveBtn = document.getElementById('saveBtn');
-      const clearBtn = document.getElementById('clearBtn');
-      const soundBtn = document.getElementById('soundBtn');
-      const soundStatus = document.getElementById('soundStatus');
-      const menuOverlay = document.getElementById('menuOverlay');
-      const playBtn = document.getElementById('playBtn');
-      const gameContainer = document.getElementById('gameContainer');
-
-      let grid, cols, rows, snake, dir, nextDir, apple, score, high, running, paused, tickRate, timer, level, skin, soundOn;
-
-      function initState(){
-        grid = parseInt(gridSelect.value,10);
-        cols = Math.floor(canvas.width / grid);
-        rows = Math.floor(canvas.height / grid);
-        snake = [{x:Math.floor(cols/2), y:Math.floor(rows/2)}];
-        dir = {x:1,y:0}; nextDir = null;
-        apple = null; placeApple();
-        score = 0;
-        high = Number(localStorage.getItem('snakeHigh') || 0);
-        highEl.textContent = high;
-        running = false; paused = false;
-        tickRate = 120;
-        timer = null;
-        level = 1;
-        skin = skinSelect.value;
-        soundOn = true;
-        scoreEl.textContent = score; levelEl.textContent = level;
-        statusEl.textContent = 'Ready';
-      }
-
-      function playSound(freq,duration=100){
-        if(!soundOn) return;
-        const ctxAudio = new (window.AudioContext||window.webkitAudioContext)();
-        const osc = ctxAudio.createOscillator();
-        const gain = ctxAudio.createGain();
-        osc.frequency.value = freq;
-        osc.connect(gain); gain.connect(ctxAudio.destination);
-        osc.start();
-        setTimeout(()=>{osc.stop(); ctxAudio.close();}, duration);
-      }
-
-      function resetGame(){
-        initState();
-        render();
-        clearInterval(timer);
-      }
-
-      function placeApple(){
-        while(true){
-          const x = Math.floor(Math.random()*cols);
-          const y = Math.floor(Math.random()*rows);
-          if(!snake.some(s => s.x===x && s.y===y)){
-            apple = {x,y}; return;
-          }
-        }
-      }
-
-      function step(){
-        if(!running || paused) return;
-        if(nextDir && !(nextDir.x===-dir.x && nextDir.y===-dir.y)) dir = nextDir;
-        nextDir = null;
-
-        const head = {x: snake[0].x+dir.x, y: snake[0].y+dir.y};
-        head.x = (head.x+cols)%cols; head.y=(head.y+rows)%rows;
-
-        if(snake.some(p=>p.x===head.x && p.y===head.y)){
-          running=false; statusEl.textContent='Game Over'; clearInterval(timer);
-          if(score>high){high=score;highEl.textContent=high;}
-          playSound(200,300);
-          return;
-        }
-
-        snake.unshift(head);
-        if(apple && head.x===apple.x && head.y===apple.y){
-          score++; scoreEl.textContent=score; placeApple();
-          if(score%5===0){ level++; levelEl.textContent=level; tickRate=Math.max(40,tickRate-10);}
-          clearInterval(timer); timer=setInterval(step,tickRate);
-          playSound(600,150);
-        } else { snake.pop(); }
-        render();
-      }
-
-      function render(){
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.save(); ctx.globalAlpha=0.06;
-        for(let x=0;x<=cols;x++){ ctx.fillRect(x*grid,0,1,canvas.height); }
-        for(let y=0;y<=rows;y++){ ctx.fillRect(0,y*grid,canvas.width,1); }
-        ctx.restore();
-
-        if(apple){ drawCell(apple.x,apple.y,'apple'); }
-        for(let i=snake.length-1;i>=0;i--){ drawCell(snake[i].x,snake[i].y,'snake',i); }
-      }
-
-      function drawCell(x,y,type,index=0){
-        if(type==='apple'){
-          if(skin==='emoji'){ ctx.font=`${grid}px serif`; ctx.fillText('🍎',x*grid,y*grid+grid); return; }
-          ctx.fillStyle='#ff6b6b'; ctx.beginPath(); ctx.arc(x*grid+grid/2,y*grid+grid/2,grid/2.4,0,Math.PI*2); ctx.fill();
-        }
-        if(type==='snake'){
-          if(skin==='classic'){ ctx.fillStyle='limegreen'; }
-          if(skin==='neon'){ ctx.fillStyle=`hsl(${(index*15)%360} 100% 50%)`; }
-          if(skin==='rainbow'){ ctx.fillStyle=`hsl(${(Date.now()/20+index*20)%360} 80% 50%)`; }
-          if(skin==='emoji'){ ctx.font=`${grid}px serif`; ctx.fillText('🟩',x*grid,y*grid+grid); return; }
-          ctx.fillRect(x*grid+1,y*grid+1,grid-2,grid-2);
-        }
-      }
-
-      // Controls
-      window.addEventListener('keydown', e => {
-        if(['ArrowUp','w','W'].includes(e.key)) nextDir={x:0,y:-1};
-        if(['ArrowDown','s','S'].includes(e.key)) nextDir={x:0,y:1};
-        if(['ArrowLeft','a','A'].includes(e.key)) nextDir={x:-1,y:0};
-        if(['ArrowRight','d','D'].includes(e.key)) nextDir={x:1,y:0};
-        if(e.key===' '){togglePause();}
-      });
-
-      startBtn.addEventListener('click',()=>{ if(running) return; running=true; paused=false; statusEl.textContent='Playing'; timer=setInterval(step,tickRate);});
-      pauseBtn.addEventListener('click',togglePause);
-      resetBtn.addEventListener('click',resetGame);
-      gridSelect.addEventListener('change',resetGame);
-      skinSelect.addEventListener('change',()=>{skin=skinSelect.value; render();});
-      soundBtn.addEventListener('click',()=>{soundOn=!soundOn;soundBtn.textContent=soundOn?'🔊 Sound On':'🔇 Sound Off';});
-
-      saveBtn.addEventListener('click',()=>{localStorage.setItem('snakeHigh',String(high));statusEl.textContent='High score saved';});
-      clearBtn.addEventListener('click',()=>{localStorage.removeItem('snakeHigh');high=0;highEl.textContent=0;statusEl.textContent='High score cleared';});
-
-      function togglePause(){ if(!running) return; paused=!paused; statusEl.textContent=paused?'Paused':'Playing'; }
-
-      // Touch
-      let touchStart=null;
-      canvas.addEventListener('touchstart',e=>{const t=e.changedTouches[0];touchStart={x:t.clientX,y:t.clientY};},{passive:true});
-      canvas.addEventListener('touchend',e=>{const t=e.changedTouches[0];if(!touchStart) return;const dx=t.clientX-touchStart.x;const dy=t.clientY-touchStart.y;if(Math.abs(dx)>Math.abs(dy)) nextDir=dx>0?{x:1,y:0}:{x:-1,y:0}; else nextDir=dy>0?{x:0,y:1}:{x:0,y:-1};},{passive:true});
-
-      function fitCanvas(){ const maxW=Math.min(window.innerWidth*0.6,760); const scale=Math.min(maxW/canvas.width,1.35); canvas.style.width=Math.round(canvas.width*scale)+'px'; canvas.style.height=Math.round(canvas.height*scale)+'px'; }
-      window.addEventListener('resize',fitCanvas);
-
-      function idleAnim(){ if(!running){ render(); if(apple) drawCell(apple.x,apple.y,'apple'); } requestAnimationFrame(idleAnim);}
-
-      playBtn.addEventListener('click',()=>{
-        menuOverlay.style.display='none';
-        gameContainer.style.display='block';
-        initState();
-        render();
-        fitCanvas();
-        requestAnimationFrame(idleAnim);
-      });
-    })();
-</script>
+<script src="snake.js"></script>
 </body>
 </html>
